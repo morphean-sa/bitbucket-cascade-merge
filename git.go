@@ -19,6 +19,21 @@ type Client struct {
 	Email      string
 }
 
+type Author struct {
+	Name  string
+	Email string
+}
+
+type Repository struct {
+	Path string
+	URL  string
+}
+
+type ClientOptions struct {
+	Repository *Repository
+	Author     *Author
+}
+
 func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) error {
 
 	if options == nil {
@@ -369,4 +384,47 @@ func (c *Client) MergeBranches(sourceBranchName string, destinationBranchName st
 	}
 
 	return nil
+}
+
+func (c *Client) Close() {
+	c.Repository.Free()
+}
+
+func NewClient(options *ClientOptions) (*Client, error) {
+
+	if options == nil || !options.Validate() {
+		return nil, errors.New("invalid client options")
+	}
+
+	var r *git.Repository
+	var err error
+
+	// try to open an existing repository
+	r, err = git.OpenRepository(options.Repository.Path)
+
+	if err != nil {
+		// try clone the given url
+		r, err = git.Clone(options.Repository.URL, options.Repository.Path, &git.CloneOptions{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if r == nil {
+		return nil, errors.New("error while initializing repository")
+	}
+
+	return &Client{
+		Repository: r,
+		Name:       options.Author.Name,
+		Email:      options.Author.Email,
+	}, nil
+
+}
+
+func (o *ClientOptions) Validate() bool {
+	if len(o.Repository.URL) > 0 && len(o.Repository.Path) > 0 {
+		return true
+	}
+	return false
 }
