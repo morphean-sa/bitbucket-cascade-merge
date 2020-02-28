@@ -7,16 +7,16 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
-var path = "/Users/sc/Desktop/repo.git"
+var path = filepath.Join(os.TempDir(), "cascade-"+time.Nanosecond.String()+".git")
 var bare *git.Repository
 
 func TestCascadeMerge(t *testing.T) {
 	var err error
 
 	os.RemoveAll(path)
-	os.RemoveAll(filepath.Join(filepath.Dir(path), "repo"))
 
 	// we need a bare repository in our tests because libgit2 does not support local push to non bare repository yet.
 	bare, err = git.InitRepository(path, true)
