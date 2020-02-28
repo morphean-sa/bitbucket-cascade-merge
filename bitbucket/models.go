@@ -1,4 +1,8 @@
-package main
+package bitbucket
+
+import (
+	"errors"
+)
 
 type PullRequestEvent struct {
 	Repository  *Repository `json:"repository"`
@@ -45,11 +49,11 @@ type PullRequestRepository struct {
 }
 
 type Repository struct {
-	Uuid    string          `json:"uuid"`
-	Name    string          `json:"name"`
-	Links   map[string]Link `json:"links"`
-	Project *Project        `json:"project"`
-	Owner   *Owner          `json:"owner"`
+	Uuid    string   `json:"uuid"`
+	Name    string   `json:"name"`
+	Links   Links    `json:"links"`
+	Project *Project `json:"project"`
+	Owner   *Owner   `json:"owner"`
 }
 
 type Project struct {
@@ -57,7 +61,13 @@ type Project struct {
 	Links map[string]Link `json:"links"`
 }
 
+type Links struct {
+	Self  *Link
+	Clone []*Link `json:"clone,omitempty"`
+}
+
 type Link struct {
+	Name string `json:"name,omitempty"`
 	Href string `json:"href"`
 }
 
@@ -73,4 +83,21 @@ type Owner struct {
 type User struct {
 	DisplayName string          `json:"display_name"`
 	Links       map[string]Link `json:"links"`
+}
+
+func (r *Repository) URL(protocols ...string) (string, error) {
+	links := r.Links.Clone
+	if links == nil {
+		return "", errors.New("missing clone link")
+	}
+
+	for _, cloneLink := range links {
+		for _, p := range protocols {
+			if len(p) == 0 || p == cloneLink.Name {
+				return cloneLink.Href, nil
+			}
+		}
+	}
+
+	return "", errors.New("no matching clone link")
 }
