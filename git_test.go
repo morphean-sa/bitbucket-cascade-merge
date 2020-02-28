@@ -70,9 +70,23 @@ func CascadeNoConflict(t *testing.T) {
 		Email:      "jon.snow@winterfell.net",
 	}
 
+	// assume someone else push a new commit to the same branch
+	err = WorkOnBareRepository(bare, &CreateDummyFileOnBranchTask{
+		BranchName: "release/48",
+		Filename:   "patch-2",
+		t:          t,
+	})
+	CheckFatal(err, t)
+
 	err = client.CascadeMerge("release/48", nil)
 
 	stat, err := os.Stat(filepath.Join(work.Workdir(), "patch-1"))
+	CheckFatal(err, t)
+	if !stat.Mode().IsRegular() {
+		t.Fail()
+	}
+
+	stat, err = os.Stat(filepath.Join(work.Workdir(), "patch-2"))
 	CheckFatal(err, t)
 	if !stat.Mode().IsRegular() {
 		t.Fail()

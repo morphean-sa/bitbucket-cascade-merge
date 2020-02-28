@@ -48,6 +48,11 @@ func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) error 
 		return err
 	}
 
+	err = c.Fetch()
+	if err != nil {
+		return nil
+	}
+
 	source := branchName
 
 	err = c.Checkout(source)
@@ -55,8 +60,18 @@ func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) error 
 		return err
 	}
 
+	err = c.Reset(source)
+	if err != nil {
+		return err
+	}
+
 	for target := cascade.Next(); target != ""; target = cascade.Next() {
 		err = c.Checkout(target)
+		if err != nil {
+			return err
+		}
+
+		err = c.Reset(target)
 		if err != nil {
 			return err
 		}
@@ -212,6 +227,48 @@ func (c *Client) Push(branchName string) error {
 
 	err = remote.Push([]string{DefaultRemoteReferencePrefix + branchName}, nil)
 
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) Fetch() error {
+	remote, err := c.Repository.Remotes.Lookup(DefaultRemoteName)
+	if err != nil {
+		return err
+	}
+	defer remote.Free()
+
+	err = remote.Fetch(make([]string, 0), &git.FetchOptions{}, "")
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Reset current HEAD to the remote branch
+func (c *Client) Reset(branchName string) error {
+	remote, err := c.Repository.Remotes.Lookup(DefaultRemoteName)
+	if err != nil {
+		return err
+	}
+	defer remote.Free()
+
+	branch, err := c.Repository.LookupBranch(branchName, git.BranchRemote)
+	if err != nil {
+		return nil
+	}
+
+	commit, err := c.Repository.LookupCommit(branch.Target())
+	if err != nil {
+		return nil
+	}
+
+	err = c.Repository.ResetToCommit(commit, git.ResetHard, &git.CheckoutOpts{})
 	if err != nil {
 		return err
 	}
