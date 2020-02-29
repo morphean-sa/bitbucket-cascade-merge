@@ -10,16 +10,13 @@ import (
 	"time"
 )
 
-var path = filepath.Join(os.TempDir(), "cascade-"+time.Nanosecond.String()+".git")
-var bare *git.Repository
-
 func TestCascadeMerge(t *testing.T) {
-	var err error
 
+	var path = filepath.Join(os.TempDir(), "cascade-"+time.Nanosecond.String()+".git")
 	os.RemoveAll(path)
 
 	// we need a bare repository in our tests because libgit2 does not support local push to non bare repository yet.
-	bare, err = git.InitRepository(path, true)
+	bare, err := git.InitRepository(path, true)
 	CheckFatal(err, t)
 	defer os.RemoveAll(path)
 	defer bare.Free()
@@ -46,160 +43,166 @@ func TestCascadeMerge(t *testing.T) {
 	)
 	CheckFatal(err, t)
 
-	t.Run("NoConflict", CascadeNoConflict)
-	t.Run("Conflict", CascadeConflict)
-	t.Run("AutoResolveNotWorking", CascadeAutoResolveNotWorking)
+	t.Run("NoConflict", CascadeNoConflict(bare))
+	t.Run("Conflict", CascadeConflict(bare))
+	t.Run("AutoResolveNotWorking", CascadeAutoResolveNotWorking(bare))
 }
 
-func CascadeNoConflict(t *testing.T) {
-	err := WorkOnBareRepository(bare, &CreateDummyFileOnBranchTask{
-		BranchName: "release/48",
-		Filename:   "patch-1",
-		t:          t,
-	})
-	CheckFatal(err, t)
-
-	work, err := git.Clone(bare.Path(), filepath.Join(filepath.Dir(path), "cascade"), &git.CloneOptions{})
-	CheckFatal(err, t)
-	defer os.RemoveAll(work.Workdir())
-	defer work.Free()
-
-	client := &Client{
-		Repository: work,
-		Author: &Author{
-			Name:  "Jon Snow",
-			Email: "jon.snow@winterfell.net",
-		},
-	}
-
-	// assume someone else push a new commit to the same branch
-	err = WorkOnBareRepository(bare, &CreateDummyFileOnBranchTask{
-		BranchName: "release/48",
-		Filename:   "patch-2",
-		t:          t,
-	})
-	CheckFatal(err, t)
-
-	err = client.CascadeMerge("release/48", nil)
-
-	stat, err := os.Stat(filepath.Join(work.Workdir(), "patch-1"))
-	CheckFatal(err, t)
-	if !stat.Mode().IsRegular() {
-		t.Fail()
-	}
-
-	stat, err = os.Stat(filepath.Join(work.Workdir(), "patch-2"))
-	CheckFatal(err, t)
-	if !stat.Mode().IsRegular() {
-		t.Fail()
-	}
-
-	CheckFatal(err, t)
-}
-
-func CascadeConflict(t *testing.T) {
-	err := WorkOnBareRepository(bare,
-		&ChangeFileOnBranchTask{
+func CascadeNoConflict(bare *git.Repository) func(t *testing.T) {
+	return func(t *testing.T) {
+		err := WorkOnBareRepository(bare, &CreateDummyFileOnBranchTask{
 			BranchName: "release/48",
-			Filename:   "foo",
-			Content:    "foo-edit-48",
+			Filename:   "patch-1",
 			t:          t,
-		},
-		&ChangeFileOnBranchTask{
-			BranchName: "develop",
-			Filename:   "foo",
-			Content:    "foo-edit-develop",
+		})
+		CheckFatal(err, t)
+
+		work, err := git.Clone(bare.Path(), filepath.Join(filepath.Dir(bare.Path()), "cascade"), &git.CloneOptions{})
+		CheckFatal(err, t)
+		defer os.RemoveAll(work.Workdir())
+		defer work.Free()
+
+		client := &Client{
+			Repository: work,
+			Author: &Author{
+				Name:  "Jon Snow",
+				Email: "jon.snow@winterfell.net",
+			},
+		}
+
+		// assume someone else push a new commit to the same branch
+		err = WorkOnBareRepository(bare, &CreateDummyFileOnBranchTask{
+			BranchName: "release/48",
+			Filename:   "patch-2",
 			t:          t,
-		},
-	)
-	CheckFatal(err, t)
+		})
+		CheckFatal(err, t)
 
-	client, err := NewClient(&ClientOptions{
-		Path: filepath.Join(filepath.Dir(path), "cascade"),
-		URL:  bare.Path(),
-		Author: &Author{
-			Name:  "Jon Snow",
-			Email: "jon.snow@winterfell.net",
-		},
-	})
-	CheckFatal(err, t)
-	defer os.RemoveAll(filepath.Join(filepath.Dir(path), "cascade"))
-	defer client.Close()
+		err = client.CascadeMerge("release/48", nil)
 
-	err = client.CascadeMerge("release/48", nil)
-	if err == nil {
-		t.Fail()
-	}
+		stat, err := os.Stat(filepath.Join(work.Workdir(), "patch-1"))
+		CheckFatal(err, t)
+		if !stat.Mode().IsRegular() {
+			t.Fail()
+		}
 
-	err = client.Checkout("release/49")
-	CheckFatal(err, t)
-	bytes49, err := client.ReadFile("foo")
-	CheckFatal(err, t)
+		stat, err = os.Stat(filepath.Join(work.Workdir(), "patch-2"))
+		CheckFatal(err, t)
+		if !stat.Mode().IsRegular() {
+			t.Fail()
+		}
 
-	if !reflect.DeepEqual(bytes49, []byte("foo-edit-48")) {
-		t.Fail()
-	}
-
-	err = client.Checkout("develop")
-	CheckFatal(err, t)
-	bytesDevelop, err := client.ReadFile("foo")
-	CheckFatal(err, t)
-
-	if !reflect.DeepEqual(bytesDevelop, []byte("foo-edit-develop")) {
-		t.Fail()
+		CheckFatal(err, t)
 	}
 }
 
-func CascadeAutoResolveNotWorking(t *testing.T) {
-	err := WorkOnBareRepository(bare,
-		&ChangeFileOnBranchTask{
-			BranchName: "release/48",
-			Filename:   "foo",
-			Content:    "foo-same-edit",
-			t:          t,
-		},
-		&ChangeFileOnBranchTask{
-			BranchName: "release/49",
-			Filename:   "foo",
-			Content:    "foo-same-edit",
-			t:          t,
-		},
-	)
-	CheckFatal(err, t)
+func CascadeConflict(bare *git.Repository) func(t *testing.T) {
+	return func(t *testing.T) {
+		err := WorkOnBareRepository(bare,
+			&ChangeFileOnBranchTask{
+				BranchName: "release/48",
+				Filename:   "foo",
+				Content:    "foo-edit-48",
+				t:          t,
+			},
+			&ChangeFileOnBranchTask{
+				BranchName: "develop",
+				Filename:   "foo",
+				Content:    "foo-edit-develop",
+				t:          t,
+			},
+		)
+		CheckFatal(err, t)
 
-	client, err := NewClient(&ClientOptions{
-		Path: filepath.Join(filepath.Dir(path), "cascade"),
-		URL:  bare.Path(),
-		Author: &Author{
-			Name:  "Jon Snow",
-			Email: "jon.snow@winterfell.net",
-		},
-	})
-	CheckFatal(err, t)
-	defer os.RemoveAll(filepath.Join(filepath.Dir(path), "cascade"))
-	defer client.Close()
+		client, err := NewClient(&ClientOptions{
+			Path: filepath.Join(filepath.Dir(bare.Path()), "cascade"),
+			URL:  bare.Path(),
+			Author: &Author{
+				Name:  "Jon Snow",
+				Email: "jon.snow@winterfell.net",
+			},
+		})
+		CheckFatal(err, t)
+		defer os.RemoveAll(filepath.Join(filepath.Dir(bare.Path()), "cascade"))
+		defer client.Close()
 
-	err = client.CascadeMerge("release/48", nil)
-	if err == nil {
-		t.Fail()
+		err = client.CascadeMerge("release/48", nil)
+		if err == nil {
+			t.Fail()
+		}
+
+		err = client.Checkout("release/49")
+		CheckFatal(err, t)
+		bytes49, err := client.ReadFile("foo")
+		CheckFatal(err, t)
+
+		if !reflect.DeepEqual(bytes49, []byte("foo-edit-48")) {
+			t.Fail()
+		}
+
+		err = client.Checkout("develop")
+		CheckFatal(err, t)
+		bytesDevelop, err := client.ReadFile("foo")
+		CheckFatal(err, t)
+
+		if !reflect.DeepEqual(bytesDevelop, []byte("foo-edit-develop")) {
+			t.Fail()
+		}
 	}
+}
 
-	err = client.Checkout("release/49")
-	CheckFatal(err, t)
-	bytes49, err := client.ReadFile("foo")
-	CheckFatal(err, t)
+func CascadeAutoResolveNotWorking(bare *git.Repository) func(t *testing.T) {
+	return func(t *testing.T) {
+		err := WorkOnBareRepository(bare,
+			&ChangeFileOnBranchTask{
+				BranchName: "release/48",
+				Filename:   "foo",
+				Content:    "foo-same-edit",
+				t:          t,
+			},
+			&ChangeFileOnBranchTask{
+				BranchName: "release/49",
+				Filename:   "foo",
+				Content:    "foo-same-edit",
+				t:          t,
+			},
+		)
+		CheckFatal(err, t)
 
-	if !reflect.DeepEqual(bytes49, []byte("foo-same-edit")) {
-		t.Fail()
-	}
+		client, err := NewClient(&ClientOptions{
+			Path: filepath.Join(filepath.Dir(bare.Path()), "cascade"),
+			URL:  bare.Path(),
+			Author: &Author{
+				Name:  "Jon Snow",
+				Email: "jon.snow@winterfell.net",
+			},
+		})
+		CheckFatal(err, t)
+		defer os.RemoveAll(filepath.Join(filepath.Dir(bare.Path()), "cascade"))
+		defer client.Close()
 
-	err = client.Checkout("develop")
-	CheckFatal(err, t)
-	bytesDevelop, err := client.ReadFile("foo")
-	CheckFatal(err, t)
+		err = client.CascadeMerge("release/48", nil)
+		if err == nil {
+			t.Fail()
+		}
 
-	if !reflect.DeepEqual(bytesDevelop, []byte("foo-edit-develop")) {
-		t.Fail()
+		err = client.Checkout("release/49")
+		CheckFatal(err, t)
+		bytes49, err := client.ReadFile("foo")
+		CheckFatal(err, t)
+
+		if !reflect.DeepEqual(bytes49, []byte("foo-same-edit")) {
+			t.Fail()
+		}
+
+		err = client.Checkout("develop")
+		CheckFatal(err, t)
+		bytesDevelop, err := client.ReadFile("foo")
+		CheckFatal(err, t)
+
+		if !reflect.DeepEqual(bytesDevelop, []byte("foo-edit-develop")) {
+			t.Fail()
+		}
 	}
 }
 
