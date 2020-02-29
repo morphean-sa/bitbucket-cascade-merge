@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/libgit2/git2go"
 	"strings"
 	"time"
@@ -14,9 +15,9 @@ const (
 )
 
 type Client struct {
-	Repository *git.Repository
-	Name       string
-	Email      string
+	Repository      *git.Repository
+	RemoteCallbacks git.RemoteCallbacks
+	Author          *Author
 }
 
 type Author struct {
@@ -24,14 +25,16 @@ type Author struct {
 	Email string
 }
 
-type Repository struct {
-	Path string
-	URL  string
+type Credentials struct {
+	Username string
+	Password string
 }
 
 type ClientOptions struct {
-	Repository *Repository
-	Author     *Author
+	Path        string
+	URL         string
+	Author      *Author
+	Credentials *Credentials
 }
 
 func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) error {
@@ -134,8 +137,8 @@ func (c *Client) Commit(message string, path ...string) (*git.Oid, error) {
 	defer tree.Free()
 
 	signature := &git.Signature{
-		Name:  c.Name,
-		Email: c.Email,
+		Name:  c.Author.Name,
+		Email: c.Author.Email,
 		When:  time.Now(),
 	}
 
@@ -225,7 +228,7 @@ func (c *Client) Push(branchName string) error {
 	}
 	defer remote.Free()
 
-	err = remote.Push([]string{DefaultRemoteReferencePrefix + branchName}, nil)
+	err = remote.Push([]string{DefaultRemoteReferencePrefix + branchName}, &git.PushOptions{RemoteCallbacks: c.RemoteCallbacks})
 
 	if err != nil {
 		return err
@@ -241,7 +244,8 @@ func (c *Client) Fetch() error {
 	}
 	defer remote.Free()
 
-	err = remote.Fetch(make([]string, 0), &git.FetchOptions{}, "")
+	var refs []string
+	err = remote.Fetch(refs, &git.FetchOptions{RemoteCallbacks: c.RemoteCallbacks}, "")
 
 	if err != nil {
 		return err
@@ -252,52 +256,19 @@ func (c *Client) Fetch() error {
 
 // Reset current HEAD to the remote branch
 func (c *Client) Reset(branchName string) error {
-	remote, err := c.Repository.Remotes.Lookup(DefaultRemoteName)
+	branch, err := c.Repository.LookupBranch(fmt.Sprintf("%s/%s", DefaultRemoteName, branchName), git.BranchRemote)
 	if err != nil {
 		return err
 	}
-	defer remote.Free()
-
-	branch, err := c.Repository.LookupBranch(branchName, git.BranchRemote)
-	if err != nil {
-		return nil
-	}
+	defer branch.Free()
 
 	commit, err := c.Repository.LookupCommit(branch.Target())
 	if err != nil {
-		return nil
+		return err
 	}
+	defer commit.Free()
 
 	err = c.Repository.ResetToCommit(commit, git.ResetHard, &git.CheckoutOpts{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func fetch(repo *git.Repository) error {
-	origin, err := repo.Remotes.Lookup(DefaultRemoteName)
-	if err != nil {
-		return err
-	}
-	defer origin.Free()
-
-	origin.Fetch(nil, &git.FetchOptions{
-		Prune: git.FetchPruneOn,
-	}, "")
-	return nil
-}
-
-func push(repo *git.Repository, branch string) error {
-	origin, err := repo.Remotes.Lookup(DefaultRemoteName)
-	if err != nil {
-		return err
-	}
-	defer origin.Free()
-
-	err = origin.Push([]string{"refs/heads/" + branch}, nil)
-
 	if err != nil {
 		return err
 	}
@@ -454,16 +425,20 @@ func NewClient(options *ClientOptions) (*Client, error) {
 	}
 
 	var r *git.Repository
+	var cb git.RemoteCallbacks
 	var err error
 
 	// try to open an existing repository
-	r, err = git.OpenRepository(options.Repository.Path)
+	r, err = git.OpenRepository(options.Path)
+
+	// create fetch options (credentials callback)
+	cb = options.CreateRemoteCallbacks()
 
 	if err != nil {
-		// try clone the given url
-		r, err = git.Clone(options.Repository.URL, options.Repository.Path, &git.CloneOptions{})
+		// try clone the given url with the given credentials
+		r, err = git.Clone(options.URL, options.Path, &git.CloneOptions{FetchOptions: &git.FetchOptions{RemoteCallbacks: cb}})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot initialize repository at %s : %s", options.URL, err)
 		}
 	}
 
@@ -472,16 +447,37 @@ func NewClient(options *ClientOptions) (*Client, error) {
 	}
 
 	return &Client{
-		Repository: r,
-		Name:       options.Author.Name,
-		Email:      options.Author.Email,
+		Repository:      r,
+		RemoteCallbacks: cb,
+		Author:          options.Author,
 	}, nil
 
 }
 
 func (o *ClientOptions) Validate() bool {
-	if len(o.Repository.URL) > 0 && len(o.Repository.Path) > 0 {
+	if len(o.URL) > 0 && len(o.Path) > 0 {
 		return true
 	}
 	return false
+}
+
+func (o *ClientOptions) CreateRemoteCallbacks() git.RemoteCallbacks {
+	if c := o.Credentials; c != nil {
+		return git.RemoteCallbacks{
+			CredentialsCallback: makeCredentialsCallback(c.Username, c.Password),
+		}
+	}
+	return git.RemoteCallbacks{}
+}
+
+func makeCredentialsCallback(username, password string) git.CredentialsCallback {
+	called := false
+	return func(url, u string, ct git.CredType) (git.ErrorCode, *git.Cred) {
+		if called {
+			return git.ErrUser, nil
+		}
+		called = true
+		errCode, cred := git.NewCredUserpassPlaintext(username, password)
+		return git.ErrorCode(errCode), &cred
+	}
 }

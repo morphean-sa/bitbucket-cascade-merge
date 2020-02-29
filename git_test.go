@@ -66,8 +66,10 @@ func CascadeNoConflict(t *testing.T) {
 
 	client := &Client{
 		Repository: work,
-		Name:       "Jon Snow",
-		Email:      "jon.snow@winterfell.net",
+		Author: &Author{
+			Name:  "Jon Snow",
+			Email: "jon.snow@winterfell.net",
+		},
 	}
 
 	// assume someone else push a new commit to the same branch
@@ -113,10 +115,8 @@ func CascadeConflict(t *testing.T) {
 	CheckFatal(err, t)
 
 	client, err := NewClient(&ClientOptions{
-		Repository: &Repository{
-			Path: filepath.Join(filepath.Dir(path), "cascade"),
-			URL:  bare.Path(),
-		},
+		Path: filepath.Join(filepath.Dir(path), "cascade"),
+		URL:  bare.Path(),
 		Author: &Author{
 			Name:  "Jon Snow",
 			Email: "jon.snow@winterfell.net",
@@ -168,10 +168,8 @@ func CascadeAutoResolveNotWorking(t *testing.T) {
 	CheckFatal(err, t)
 
 	client, err := NewClient(&ClientOptions{
-		Repository: &Repository{
-			Path: filepath.Join(filepath.Dir(path), "cascade"),
-			URL:  bare.Path(),
-		},
+		Path: filepath.Join(filepath.Dir(path), "cascade"),
+		URL:  bare.Path(),
 		Author: &Author{
 			Name:  "Jon Snow",
 			Email: "jon.snow@winterfell.net",
@@ -299,10 +297,8 @@ func WorkOnBareRepository(bare *git.Repository, tasks ...Task) error {
 	defer os.RemoveAll(tmp)
 
 	client, err := NewClient(&ClientOptions{
-		Repository: &Repository{
-			Path: tmp,
-			URL:  bare.Path(),
-		},
+		Path: tmp,
+		URL:  bare.Path(),
 		Author: &Author{
 			Name:  "Jon Snow",
 			Email: "jon.snow@winterfell.net",
@@ -328,8 +324,9 @@ func WorkOnBareRepository(bare *git.Repository, tasks ...Task) error {
 
 func TestClientOptions_Validate(t *testing.T) {
 	type fields struct {
-		Author     *Author
-		Repository *Repository
+		Author *Author
+		Path   string
+		URL    string
 	}
 	tests := []struct {
 		name   string
@@ -339,15 +336,17 @@ func TestClientOptions_Validate(t *testing.T) {
 		{
 			name: "Valid",
 			fields: fields{
-				Author:     &Author{Name: "Jon Snow", Email: "jon@snow.nl"},
-				Repository: &Repository{Path: "907ab3da-653e-460e-bb5b-11b0b0b95e3f", URL: "https://git.com/winterfell.git"},
+				Author: &Author{Name: "Jon Snow", Email: "jon@snow.nl"},
+				Path:   "907ab3da-653e-460e-bb5b-11b0b0b95e3f",
+				URL:    "https://git.com/winterfell.git",
 			},
 			want: true,
 		}, {
 			name: "Invalid",
 			fields: fields{
-				Author:     &Author{Name: "Jon Snow", Email: "jon@snow.nl"},
-				Repository: &Repository{Path: "907ab3da-653e-460e-bb5b-11b0b0b95e3f", URL: ""},
+				Author: &Author{Name: "Jon Snow", Email: "jon@snow.nl"},
+				Path:   "907ab3da-653e-460e-bb5b-11b0b0b95e3f",
+				URL:    "",
 			},
 			want: false,
 		},
@@ -355,8 +354,9 @@ func TestClientOptions_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			o := &ClientOptions{
-				Author:     tt.fields.Author,
-				Repository: tt.fields.Repository,
+				Author: tt.fields.Author,
+				Path:   tt.fields.Path,
+				URL:    tt.fields.URL,
 			}
 			if got := o.Validate(); got != tt.want {
 				t.Errorf("Validate() = %v, want %v", got, tt.want)
