@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/samcontesse/bitbucket-cascade-merge/bitbucket"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,7 +9,7 @@ import (
 
 // The body is a pull request event. Happy path. We expect a status 201
 func TestEventHandler_HandleValidPayload(t *testing.T) {
-	c := make(chan bitbucket.PullRequestEvent, 1)
+	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
 	rr, err := request("test/fixtures/hook-pull-request-fulfilled.json", eh.Handle)
@@ -31,7 +30,7 @@ func TestEventHandler_HandleValidPayload(t *testing.T) {
 
 // The body is a pull request event but state is not set to MERGED. We expect a status 422
 func TestEventHandler_HandleUnsupportedState(t *testing.T) {
-	c := make(chan bitbucket.PullRequestEvent, 1)
+	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
 	rr, err := request("test/fixtures/hook-pull-request-created.json", eh.Handle)
@@ -47,7 +46,7 @@ func TestEventHandler_HandleUnsupportedState(t *testing.T) {
 
 // The body is a push event (not a pull request event). We expect a status 400
 func TestEventHandler_HandleUnsupportedEventType(t *testing.T) {
-	c := make(chan bitbucket.PullRequestEvent, 1)
+	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
 	rr, err := request("test/fixtures/hook-pr-merged-develop.json", eh.Handle)
@@ -63,7 +62,7 @@ func TestEventHandler_HandleUnsupportedEventType(t *testing.T) {
 
 // The body contains some random model that we cannot deserialize. We expect a status 400.
 func TestEventHandler_HandleBadRequest(t *testing.T) {
-	c := make(chan bitbucket.PullRequestEvent, 1)
+	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
 	rr, err := request("test/fixtures/hook-bad-request.json", eh.Handle)

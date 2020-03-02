@@ -20,11 +20,6 @@ type Client struct {
 	Author          *Author
 }
 
-type Author struct {
-	Name  string
-	Email string
-}
-
 type Credentials struct {
 	Username string
 	Password string
@@ -37,7 +32,7 @@ type ClientOptions struct {
 	Credentials *Credentials
 }
 
-func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) error {
+func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) *CascadeMergeState {
 
 	if options == nil {
 		options = &CascadeOptions{
@@ -48,45 +43,45 @@ func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) error 
 
 	cascade, err := c.BuildCascade(options)
 	if err != nil {
-		return err
+		return &CascadeMergeState{error: err}
 	}
 
 	err = c.Fetch()
 	if err != nil {
-		return nil
+		return &CascadeMergeState{error: err}
 	}
 
 	source := branchName
 
 	err = c.Checkout(source)
 	if err != nil {
-		return err
+		return &CascadeMergeState{error: err}
 	}
 
 	err = c.Reset(source)
 	if err != nil {
-		return err
+		return &CascadeMergeState{error: err}
 	}
 
 	for target := cascade.Next(); target != ""; target = cascade.Next() {
 		err = c.Checkout(target)
 		if err != nil {
-			return err
+			return &CascadeMergeState{Source: source, Target: target, error: err}
 		}
 
 		err = c.Reset(target)
 		if err != nil {
-			return err
+			return &CascadeMergeState{Source: source, Target: target, error: err}
 		}
 
 		err = c.MergeBranches(source, target)
 		if err != nil {
-			return err
+			return &CascadeMergeState{Source: source, Target: target, error: err}
 		}
 
 		err := c.Push(target)
 		if err != nil {
-			return err
+			return &CascadeMergeState{Source: source, Target: target, error: err}
 		}
 
 		source = target
@@ -471,12 +466,8 @@ func (o *ClientOptions) CreateRemoteCallbacks() git.RemoteCallbacks {
 }
 
 func makeCredentialsCallback(username, password string) git.CredentialsCallback {
-	called := false
 	return func(url, u string, ct git.CredType) (git.ErrorCode, *git.Cred) {
-		if called {
-			return git.ErrUser, nil
-		}
-		called = true
+		// TODO check endless loop
 		errCode, cred := git.NewCredUserpassPlaintext(username, password)
 		return git.ErrorCode(errCode), &cred
 	}

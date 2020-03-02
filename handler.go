@@ -2,17 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/samcontesse/bitbucket-cascade-merge/bitbucket"
 	"net/http"
 )
 
 type EventHandler struct {
-	channel chan<- bitbucket.PullRequestEvent
+	channel chan<- PullRequestEvent
 }
 
 func (e EventHandler) Handle(writer http.ResponseWriter, request *http.Request) {
 
-	var event bitbucket.PullRequestEvent
+	var event PullRequestEvent
 
 	err := json.NewDecoder(request.Body).Decode(&event)
 
@@ -22,7 +21,7 @@ func (e EventHandler) Handle(writer http.ResponseWriter, request *http.Request) 
 	}
 
 	// take only merged state
-	if *event.PullRequest.State != bitbucket.Merged {
+	if *event.PullRequest.State != Merged {
 		writer.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
@@ -35,4 +34,8 @@ func (e EventHandler) Handle(writer http.ResponseWriter, request *http.Request) 
 		writer.WriteHeader(http.StatusTooManyRequests)
 	}
 
+}
+
+func NewEventHandler(c chan PullRequestEvent) *EventHandler {
+	return &EventHandler{channel: c}
 }
