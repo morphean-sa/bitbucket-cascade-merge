@@ -1,8 +1,8 @@
 # Bitbucket Cascade Merge
 
 Bitbucket Cascade Merge is a service used to automatically cascade changes
-after a pull request has been successfully merged. This feature has not
-been ported to Bitbucket Cloud.
+after a pull request has been successfully merged (fulfilled). This feature
+has not been ported to Bitbucket Cloud.
 
 You can show you interest and vote for this feature :
 [BCLOUD-14286](https://jira.atlassian.com/browse/BCLOUD-14286)
@@ -25,11 +25,12 @@ the repository.
 4. Type a **label** and select the following permissions :
    * Repositories : Read, Write
    * Pull Requests : Read, Write
-5. Copy the password somewhere safe, you will need it later
+5. Copy the password somewhere safe, you will need it later to configure
+   environment variables
 
 ### Configure a webhook on the repository
 
-1. Navigate to the repository
+1. Navigate to the repository you want to activate cascade merges
 2. Go to Settings > Workflow > Webhooks
 3. Click on **Add webhook**
 4. Type a title, the url of your container and select
@@ -42,8 +43,8 @@ The container can be configured with environment variable.
 Key | Default Value | Description
 --- | --- | ---
 PORT | 5000 | Server will listen on this port
-USERNAME | | Bitbucket username
-PASSWORD | | Bitbucket app password
+BITBUCKET_USERNAME | | Bitbucket username
+BITBUCKET_PASSWORD | | Bitbucket app password
 
 ## Requirements
 
