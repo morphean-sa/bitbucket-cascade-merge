@@ -467,7 +467,6 @@ func (o *ClientOptions) CreateRemoteCallbacks() git.RemoteCallbacks {
 
 func makeCredentialsCallback(username, password string) git.CredentialsCallback {
 	return func(url, u string, ct git.CredType) (git.ErrorCode, *git.Cred) {
-		// TODO check endless loop
 		errCode, cred := git.NewCredUserpassPlaintext(username, password)
 		return git.ErrorCode(errCode), &cred
 	}

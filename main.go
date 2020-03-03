@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-// TODO Wait worker to finish before quitting
-// TODO Add middleware to validate origin (source ip, headers, ...)
 func main() {
 	// initialize a buffered channel to process merges one at the time
 	events := make(chan PullRequestEvent, 100)
