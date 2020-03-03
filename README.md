@@ -51,6 +51,16 @@ BITBUCKET_USERNAME | | Bitbucket username
 BITBUCKET_PASSWORD | | Bitbucket app password
 TOKEN | | Security token
 
+### Run the container
+
+```
+docker run \
+  -e BITBUCKET_USERNAME=<fillme> -e BITBUCKET_PASSWORD=<fillme> -e TOKEN=<fillme> \
+  --publish 5000:5000 \
+  --name bcm \
+  samcontesse/bitbucket-cascade-merge
+```
+
 ## Requirements
 
 [Libgit2 v0.25](https://github.com/libgit2/libgit2/archive/v0.25.0.tar.gz)
