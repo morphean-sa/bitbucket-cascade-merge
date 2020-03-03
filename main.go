@@ -17,7 +17,7 @@ func main() {
 	// start the hook listener
 	handler := NewEventHandler(events)
 	addr := fmt.Sprintf(":%s", getEnv("PORT", "5000"))
-	http.HandleFunc("/", handler.Handle)
+	http.Handle("/", handler.CheckToken(getEnv("TOKEN", ""), handler.Handle()))
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 		log.Fatalf("cannot start server on %s", addr)

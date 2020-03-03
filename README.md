@@ -36,6 +36,10 @@ the repository.
 4. Type a title, the url of your container and select
    **Choose from a full list of triggers** : Pull Request > Merged
 
+Security notice: you can use a *token* query parameter in the url field
+(eg. `?token=your-random-token`) that needs to match the configured value
+of the `TOKEN` environment variable.
+
 ### Configure the container
 
 The container can be configured with environment variable.
@@ -45,6 +49,7 @@ Key | Default Value | Description
 PORT | 5000 | Server will listen on this port
 BITBUCKET_USERNAME | | Bitbucket username
 BITBUCKET_PASSWORD | | Bitbucket app password
+TOKEN | | Security token
 
 ## Requirements
 

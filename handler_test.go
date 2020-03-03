@@ -12,7 +12,7 @@ func TestEventHandler_HandleValidPayload(t *testing.T) {
 	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
-	rr, err := request("test/fixtures/hook-pull-request-fulfilled.json", eh.Handle)
+	rr, err := request("test/fixtures/hook-pull-request-fulfilled.json", eh.Handle())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestEventHandler_HandleUnsupportedState(t *testing.T) {
 	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
-	rr, err := request("test/fixtures/hook-pull-request-created.json", eh.Handle)
+	rr, err := request("test/fixtures/hook-pull-request-created.json", eh.Handle())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestEventHandler_HandleUnsupportedEventType(t *testing.T) {
 	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
-	rr, err := request("test/fixtures/hook-pr-merged-develop.json", eh.Handle)
+	rr, err := request("test/fixtures/hook-pr-merged-develop.json", eh.Handle())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestEventHandler_HandleBadRequest(t *testing.T) {
 	c := make(chan PullRequestEvent, 1)
 	eh := EventHandler{channel: c}
 
-	rr, err := request("test/fixtures/hook-bad-request.json", eh.Handle)
+	rr, err := request("test/fixtures/hook-bad-request.json", eh.Handle())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestEventHandler_HandleBadRequest(t *testing.T) {
 	}
 }
 
-func request(filename string, hf http.HandlerFunc) (*httptest.ResponseRecorder, error) {
+func request(filename string, hf http.Handler) (*httptest.ResponseRecorder, error) {
 	file, _ := os.Open(filename)
 	req, err := http.NewRequest("POST", "/hook", file)
 	if err != nil {
@@ -84,8 +84,7 @@ func request(filename string, hf http.HandlerFunc) (*httptest.ResponseRecorder, 
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(hf)
-	handler.ServeHTTP(rr, req)
+	hf.ServeHTTP(rr, req)
 
 	return rr, nil
 }
