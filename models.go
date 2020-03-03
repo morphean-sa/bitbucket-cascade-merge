@@ -15,13 +15,13 @@ type PullRequestEvent struct {
 }
 
 type PullRequest struct {
-	Id          int               `json:"id"`
-	Title       string            `json:"title"`
-	Description string            `json:"description"`
-	State       *PullRequestState `json:"state"`
-	Author      *Author           `json:"author"`
-	Source      *PullRequestRef   `json:"source"`
-	Destination *PullRequestRef   `json:"destination"`
+	Id          int              `json:"id"`
+	Title       string           `json:"title"`
+	Description string           `json:"description"`
+	State       PullRequestState `json:"state"`
+	Author      *Author          `json:"author"`
+	Source      *PullRequestRef  `json:"source"`
+	Destination *PullRequestRef  `json:"destination"`
 }
 
 type PullRequestState string

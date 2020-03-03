@@ -21,7 +21,7 @@ func (e EventHandler) Handle(writer http.ResponseWriter, request *http.Request) 
 	}
 
 	// take only merged state
-	if *event.PullRequest.State != Merged {
+	if event.PullRequest.State != Merged {
 		writer.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
