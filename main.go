@@ -76,8 +76,7 @@ func worker(event <-chan PullRequestEvent) {
 				"Automatic merge failure",
 				"There was a merge conflict automatically merging this branch",
 				state.Source,
-				state.Target,
-				e.Actor.UUID)
+				state.Target)
 
 			if err != nil {
 				log.Printf("could not create a pull request %s to %s on %s", state.Source, state.Target, e.Repository.Name)

@@ -78,7 +78,7 @@ func (c *Bitbucket) GetCascadeOptions(owner, repo string) (*CascadeOptions, erro
 	return nil, fmt.Errorf("cannot inspect branching model on %s", repo)
 }
 
-func (c *Bitbucket) CreatePullRequest(title, description, sourceBranch, destinationBranch string, reviewers ...string) error {
+func (c *Bitbucket) CreatePullRequest(title, description, sourceBranch, destinationBranch string) error {
 	opt := &bitbucket.PullRequestsOptions{
 		Owner:             c.Owner,
 		RepoSlug:          c.RepoSlug,
@@ -86,7 +86,6 @@ func (c *Bitbucket) CreatePullRequest(title, description, sourceBranch, destinat
 		Description:       description,
 		SourceBranch:      sourceBranch,
 		DestinationBranch: destinationBranch,
-		// TODO reviewers by uuid
 	}
 
 	_, err := c.Client.Repositories.PullRequests.Create(opt)
