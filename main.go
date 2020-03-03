@@ -24,6 +24,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot start server on %s", addr)
 	}
+
+	close(events)
 }
 
 func worker(event <-chan PullRequestEvent) {
