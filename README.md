@@ -4,6 +4,10 @@ Bitbucket Cascade Merge is a service used to automatically cascade changes
 after a pull request has been successfully merged (fulfilled). This feature
 has not been ported to Bitbucket Cloud.
 
+More information can be found on the Bitbucket Server
+[automatic branch merging](https://confluence.atlassian.com/bitbucketserver/automatic-branch-merging-776639993.html)
+documentation. Besides semantic version that is currently not supported, the behaviour tries to be the same.
+
 You can show you interest and vote for this feature :
 [BCLOUD-14286](https://jira.atlassian.com/browse/BCLOUD-14286)
 
