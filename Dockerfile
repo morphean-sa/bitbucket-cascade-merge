@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine AS builder
+FROM golang:1.14-alpine AS builder
 LABEL maintainer="Samuel Contesse <samuel.contesse@morphean.com>"
 RUN apk add --update-cache alpine-sdk libgit2-dev && rm -rf /var/cache/apk/*
 WORKDIR /build
