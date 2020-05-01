@@ -272,7 +272,6 @@ func (c *Client) Reset(branchName string) error {
 }
 
 func (c *Client) BuildCascade(options *CascadeOptions) (*Cascade, error) {
-	prefixes := []string{options.ReleasePrefix, options.DevelopmentName}
 	cascade := Cascade{
 		Branches: make([]string, 0),
 		Current:  0,
@@ -285,10 +284,9 @@ func (c *Client) BuildCascade(options *CascadeOptions) (*Cascade, error) {
 
 	iterator.ForEach(func(branch *git.Branch, branchType git.BranchType) error {
 		shorthand := branch.Shorthand()
-		for _, p := range prefixes {
-			if strings.Contains(shorthand, p) {
-				cascade.Append(strings.TrimPrefix(shorthand, DefaultRemoteName+"/"))
-			}
+		branchName := strings.TrimPrefix(shorthand, DefaultRemoteName+"/")
+		if branchName == options.DevelopmentName || strings.HasPrefix(branchName, options.ReleasePrefix) {
+			cascade.Append(branchName)
 		}
 		return nil
 	})
