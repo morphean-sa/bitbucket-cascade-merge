@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	DefaultMaster                = "master"
 	DefaultRemoteName            = "origin"
 	DefaultRemoteReferencePrefix = "refs/heads/"
 	DefaultCommitReferenceName   = "HEAD"
@@ -41,7 +42,12 @@ func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) *Casca
 		}
 	}
 
-	err := c.Fetch()
+	err := c.RemoveLocalBranches()
+	if err != nil {
+		return &CascadeMergeState{error: err}
+	}
+
+	err = c.Fetch()
 	if err != nil {
 		return &CascadeMergeState{error: err}
 	}
@@ -403,6 +409,25 @@ func (c *Client) MergeBranches(sourceBranchName string, destinationBranchName st
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (c *Client) RemoveLocalBranches() error {
+	iterator, err := c.Repository.NewBranchIterator(git.BranchLocal)
+	if err != nil {
+		return err
+	}
+
+	iterator.ForEach(func(branch *git.Branch, branchType git.BranchType) error {
+		if DefaultMaster != branch.Shorthand() {
+			err = branch.Delete()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
 	return nil
 }
