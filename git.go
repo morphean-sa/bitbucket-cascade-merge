@@ -41,12 +41,12 @@ func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) *Casca
 		}
 	}
 
-	cascade, err := c.BuildCascade(options)
+	err := c.Fetch()
 	if err != nil {
 		return &CascadeMergeState{error: err}
 	}
 
-	err = c.Fetch()
+	cascade, err := c.BuildCascade(options)
 	if err != nil {
 		return &CascadeMergeState{error: err}
 	}
@@ -240,7 +240,7 @@ func (c *Client) Fetch() error {
 	defer remote.Free()
 
 	var refs []string
-	err = remote.Fetch(refs, &git.FetchOptions{RemoteCallbacks: c.RemoteCallbacks}, "")
+	err = remote.Fetch(refs, &git.FetchOptions{RemoteCallbacks: c.RemoteCallbacks, Prune: git.FetchPruneOn}, "")
 
 	if err != nil {
 		return err
