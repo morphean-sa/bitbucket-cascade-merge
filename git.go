@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/libgit2/git2go"
+	"github.com/libgit2/git2go/v30"
 	"strings"
 	"time"
 )
@@ -52,7 +52,7 @@ func (c *Client) CascadeMerge(branchName string, options *CascadeOptions) *Casca
 		return &CascadeMergeState{error: err}
 	}
 
-	cascade, err := c.BuildCascade(options)
+	cascade, err := c.BuildCascade(options, branchName)
 	if err != nil {
 		return &CascadeMergeState{error: err}
 	}
@@ -277,7 +277,7 @@ func (c *Client) Reset(branchName string) error {
 	return nil
 }
 
-func (c *Client) BuildCascade(options *CascadeOptions) (*Cascade, error) {
+func (c *Client) BuildCascade(options *CascadeOptions, startBranch string) (*Cascade, error) {
 	cascade := Cascade{
 		Branches: make([]string, 0),
 		Current:  0,
@@ -296,6 +296,8 @@ func (c *Client) BuildCascade(options *CascadeOptions) (*Cascade, error) {
 		}
 		return nil
 	})
+
+	cascade.Slice(startBranch)
 
 	return &cascade, nil
 }
@@ -489,8 +491,8 @@ func (o *ClientOptions) CreateRemoteCallbacks() git.RemoteCallbacks {
 }
 
 func makeCredentialsCallback(username, password string) git.CredentialsCallback {
-	return func(url, u string, ct git.CredType) (git.ErrorCode, *git.Cred) {
-		errCode, cred := git.NewCredUserpassPlaintext(username, password)
-		return git.ErrorCode(errCode), &cred
+	return func(url, u string, ct git.CredType) (*git.Cred, error) {
+		cred, err := git.NewCredUserpassPlaintext(username, password)
+		return cred, err
 	}
 }

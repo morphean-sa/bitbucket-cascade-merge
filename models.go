@@ -128,6 +128,17 @@ func (c *Cascade) Append(branchName string) {
 	sort.Sort(ByVersion(c.Branches))
 }
 
+// Slice cascade branches to have only the target branch and its following branches.
+func (c *Cascade) Slice(startBranch string) {
+	for _, branch := range c.Branches {
+		if branch != startBranch {
+			c.Branches = c.Branches[1:]
+		} else {
+			break
+		}
+	}
+}
+
 // Extract an int representation of the version found in the given branch. Branch must be named accordingly to the
 // following format :
 //     <kind>/<version>

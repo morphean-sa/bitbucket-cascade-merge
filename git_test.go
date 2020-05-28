@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/libgit2/git2go"
+	"github.com/libgit2/git2go/v30"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -46,6 +46,8 @@ func TestCascadeMerge(t *testing.T) {
 	t.Run("NoConflict", CascadeNoConflict(bare))
 	t.Run("Conflict", CascadeConflict(bare))
 	t.Run("AutoResolveNotWorking", CascadeAutoResolveNotWorking(bare))
+	t.Run("MergeToDevelop", MergeToDevelop(bare))
+	t.Run("MergeDevelopToDevelop", MergeDevelopToDevelop(bare))
 }
 
 func CascadeNoConflict(bare *git.Repository) func(t *testing.T) {
@@ -206,6 +208,87 @@ func CascadeAutoResolveNotWorking(bare *git.Repository) func(t *testing.T) {
 	}
 }
 
+func MergeToDevelop(bare *git.Repository) func(t *testing.T) {
+	return func(t *testing.T) {
+		err := WorkOnBareRepository(bare,
+			&CreateDummyFileOnBranchTask{
+				BranchName: "release/49",
+				Filename:   "abc",
+				t:          t,
+			})
+		CheckFatal(err, t)
+
+		path := filepath.Join(filepath.Dir(bare.Path()), "cascade")
+		client, err := NewClient(&ClientOptions{
+			Path: path,
+			URL:  bare.Path(),
+			Author: &Author{
+				Name:  "Jon Snow",
+				Email: "jon.snow@winterfell.net",
+			},
+		})
+		CheckFatal(err, t)
+		defer os.RemoveAll(path)
+		defer client.Close()
+
+		err = client.CascadeMerge("release/49", nil)
+
+		err = WorkOnBareRepository(bare,
+			&FileExistsOnBranchTask{
+				BranchName: "release/49",
+				Filename:   "abc",
+				t:          t,
+			})
+		CheckFatal(err, t)
+
+	}
+}
+
+func MergeDevelopToDevelop(bare *git.Repository) func(t *testing.T) {
+	return func(t *testing.T) {
+		err := WorkOnBareRepository(bare,
+			&CreateDummyFileOnBranchTask{
+				BranchName: "develop",
+				Filename:   "def",
+				t:          t,
+			})
+		CheckFatal(err, t)
+
+		path := filepath.Join(filepath.Dir(bare.Path()), "cascade")
+		work, err := git.Clone(bare.Path(), path, &git.CloneOptions{})
+		CheckFatal(err, t)
+		CheckFatal(err, t)
+		defer os.RemoveAll(work.Workdir())
+		defer work.Free()
+
+		client := &Client{
+			Repository: work,
+			Author: &Author{
+				Name:  "Jon Snow",
+				Email: "jon.snow@winterfell.net",
+			},
+		}
+
+		CheckFatal(err, t)
+
+		client.Checkout("develop")
+		head, err := work.Head()
+		defer head.Free()
+		CheckFatal(err, t)
+
+		// should do nothing
+		err = client.CascadeMerge("develop", nil)
+		actual, err := work.Head()
+
+		CheckFatal(err, t)
+		if actual.Target().String() != head.Target().String() {
+			t.Fail()
+		}
+
+		CheckFatal(err, t)
+	}
+}
+
 func CheckFatal(err error, t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
@@ -284,6 +367,24 @@ func (t *ChangeFileOnBranchTask) Do(client *Client) {
 
 	err = client.Push(t.BranchName)
 	CheckFatal(err, t.t)
+}
+
+type FileExistsOnBranchTask struct {
+	BranchName string
+	Filename   string
+	t          *testing.T
+}
+
+func (t *FileExistsOnBranchTask) Do(client *Client) {
+	err := client.Checkout(t.BranchName)
+	CheckFatal(err, t.t)
+
+	stat, err := os.Stat(filepath.Join(client.Repository.Workdir(), t.Filename))
+	CheckFatal(err, t.t)
+
+	if !stat.Mode().IsRegular() {
+		t.t.Fatal(t.Filename + " does not exist on " + t.BranchName)
+	}
 }
 
 func WorkOnBareRepository(bare *git.Repository, tasks ...Task) error {

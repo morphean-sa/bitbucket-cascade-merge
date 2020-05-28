@@ -132,6 +132,37 @@ func TestCascade_Append(t *testing.T) {
 	}
 }
 
+func TestCascade_Slice(t *testing.T) {
+	type fields struct {
+		TargetBranch string
+		BranchNames  []string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []string
+	}{
+		{name: "Unbound", fields: fields{BranchNames: []string{"release/3", "release/2"}, TargetBranch: "develop"}, want: []string{}},
+		{name: "BoundLast", fields: fields{BranchNames: []string{"develop", "release/3"}, TargetBranch: "develop"}, want: []string{"develop"}},
+		{name: "BoundFirst", fields: fields{BranchNames: []string{"develop", "release/2", "release/3"}, TargetBranch: "release/2"}, want: []string{"release/2", "release/3", "develop"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Cascade{
+				Branches: make([]string, 0),
+				Current:  0,
+			}
+			for _, n := range tt.fields.BranchNames {
+				c.Append(n)
+			}
+			c.Slice(tt.fields.TargetBranch)
+			if !reflect.DeepEqual(c.Branches, tt.want) {
+				t.Errorf("Next() = %v, want %v", c.Branches, tt.want)
+			}
+		})
+	}
+}
+
 func Test_extractVersion(t *testing.T) {
 	type args struct {
 		b string

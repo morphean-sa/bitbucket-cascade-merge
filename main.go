@@ -63,7 +63,7 @@ func worker(event <-chan PullRequestEvent) {
 
 		// check destination branch is candidate for auto merge
 		destination := e.PullRequest.Destination.Branch.Name
-		if !strings.HasPrefix(destination, opts.DevelopmentName) && !strings.HasPrefix(destination, opts.ReleasePrefix) {
+		if strings.HasPrefix(destination, opts.DevelopmentName) && !strings.HasPrefix(destination, opts.ReleasePrefix) {
 			continue
 		}
 
