@@ -37,7 +37,7 @@ func worker(event <-chan PullRequestEvent) {
 		api := NewBitbucket(username, password, e.Repository.Owner.UUID, e.Repository.Name)
 		url, err := api.GetCloneURL("https")
 		if err != nil {
-			log.Printf("cannot read clone url of %s", e.Repository.Name)
+			log.Printf("cannot read clone url of %s (owner=%s): %s", e.Repository.Name, e.Repository.Owner.UUID, err)
 			continue
 		}
 
