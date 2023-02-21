@@ -48,25 +48,32 @@ of the `TOKEN` environment variable.
 
 The container can be configured with environment variable.
 
-Key | Default Value | Description
---- | --- | ---
-PORT | 5000 | Server will listen on this port
-BITBUCKET_USERNAME | | Bitbucket username
-BITBUCKET_PASSWORD | | Bitbucket app password
-TOKEN | | Security token
+| Key                | Default Value | Description                     |
+|--------------------|---------------|---------------------------------|
+| PORT               | 5000          | Server will listen on this port |
+| BITBUCKET_USERNAME |               | Bitbucket username              |
+| BITBUCKET_PASSWORD |               | Bitbucket app password          |
+| TOKEN              |               | Security token                  |
+
+
+
+
 
 ### Run the container
+
+Was initially created by [Samuel Contesse](https://github.com/samcontesse).
+
 
 ```
 docker run \
   -e BITBUCKET_USERNAME=<fillme> -e BITBUCKET_PASSWORD=<fillme> -e TOKEN=<fillme> \
   --publish 5000:5000 \
   --name bcm \
-  samcontesse/bitbucket-cascade-merge
+  morpheancloud/bitbucket-cascade-merge
 ```
 
 ## Requirements
 
-[Libgit2 v0.25](https://github.com/libgit2/libgit2/archive/v0.25.0.tar.gz)
+[Libgit2 v1.5.1](https://github.com/libgit2/libgit2/archive/refs/tags/v1.5.1.tar.gz)
 must be installed if you do not use the Docker image provided.
 
