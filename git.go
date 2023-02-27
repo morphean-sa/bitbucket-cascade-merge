@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/libgit2/git2go/v30"
+	"github.com/libgit2/git2go/v34"
 	"strings"
 	"time"
 )
@@ -456,7 +456,7 @@ func NewClient(options *ClientOptions) (*Client, error) {
 
 	if err != nil {
 		// try clone the given url with the given credentials
-		r, err = git.Clone(options.URL, options.Path, &git.CloneOptions{FetchOptions: &git.FetchOptions{RemoteCallbacks: cb}})
+		r, err = git.Clone(options.URL, options.Path, &git.CloneOptions{FetchOptions: git.FetchOptions{RemoteCallbacks: cb}})
 		if err != nil {
 			return nil, fmt.Errorf("cannot initialize repository at %s : %s", options.URL, err)
 		}

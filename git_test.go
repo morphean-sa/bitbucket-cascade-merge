@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/libgit2/git2go/v30"
+	"github.com/libgit2/git2go/v34"
 	"io/ioutil"
 	"os"
 	"path/filepath"
